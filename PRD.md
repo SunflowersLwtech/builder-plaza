@@ -471,6 +471,5 @@ erDiagram
 - `CONTEXT.md` — 领域词汇表(Live/Mocked、三角色、Primary Role、核心领域名词)
 - `docs/adr/0001` — 匹配引擎选型
 - `docs/adr/0002` — 后端栈与 AWS 服务映射
-- `docs/adr/0003` — LinkedIn 双实现与 go/no-go
-- `linkedin-application-guide.md` — LinkedIn Developer Portal 申请流程
+- `docs/adr/0003` — LinkedIn 双实现(已 Go:Live 凭证已获批,Simulated 仍用于自动化测试)
 - `privacy.html` — 已生成的隐私政策页面(S3 托管用)
