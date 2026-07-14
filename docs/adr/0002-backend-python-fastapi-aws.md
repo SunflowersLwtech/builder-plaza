@@ -1,0 +1,8 @@
+# Backend: single Python/FastAPI service on a pure AWS stack, PostgreSQL with pgvector
+
+The client is Flutter (both platforms, single codebase) talking HTTPS/REST (JSON) to the backend. We decided on one Python FastAPI service rather than Node.js or a split backend, because the matching engine (sentence-transformers + scikit-learn, see ADR-0001) locks the ML work into Python, and maintaining two backend runtimes in a three-week window is unaffordable. All cloud services come from AWS only (team constraint), and deployment is cloud-only — no local/Docker-Compose fallback — because the lecturer prefers cloud services and local deployment causes collaboration friction across three developers. Cost is explicitly not a constraint. Service mapping: FastAPI + SBERT run as a single container on **App Runner** (Lambda rejected: model cold-start would stall the live demo); **RDS PostgreSQL** with the pgvector extension serves both the structured-data and skill-embedding tiers; **S3** with pre-signed URLs stores anonymised photos and project screenshots (rubric requires live image-based binary data handling); **Amazon Bedrock** provides the lightweight-LLM summarisation that turns commit/PR activity into Growth Plaza cards; auth is GitHub-OAuth-rooted custom JWT (**Cognito rejected** as a redundant identity layer).
+
+## Considered Options
+
+- **Node.js backend** — stronger serverless-function ecosystem, but no first-class SBERT support (transformers.js is weaker and heavier), and its main advantage (Firebase integration) is void since the data tier is PostgreSQL.
+- **Separate vector database** — rejected; pgvector keeps one database and halves the ops burden.
