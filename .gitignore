@@ -16,3 +16,6 @@ credentials.csv
 
 # Local binaries for the demo recording (scrcpy) — not part of the build
 .tools/
+
+# Editor
+.vscode/
