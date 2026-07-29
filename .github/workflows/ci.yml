@@ -131,6 +131,14 @@ jobs:
           alembic upgrade head
           python seed.py --no-github
 
+      # The first /matches call otherwise downloads the SBERT weights from the
+      # HF Hub inside the request, slow enough that the app's 10s Dio timeout
+      # trips and the E2E flow flakes. Warm the on-disk cache up front.
+      - name: Pre-download SBERT weights
+        working-directory: backend
+        run: |
+          python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
+
       - name: Start uvicorn
         working-directory: backend
         run: |

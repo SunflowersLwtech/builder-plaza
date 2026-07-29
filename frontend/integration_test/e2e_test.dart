@@ -46,31 +46,26 @@ Future<void> _pumpUntilFound(
 /// exists on both the home card rows and the project form's chips, and the
 /// route beneath a pushed page stays in the tree behind an IgnorePointer).
 /// Tapping that copy is silently swallowed.
+/// A route transition also leaves the incoming page briefly non-hit-testable
+/// (AnimatedOpacity + IgnorePointer), so this pumps until a tappable
+/// candidate actually exists instead of firing blind.
 Future<void> _tapVisible(WidgetTester tester, Finder finder) async {
+  final end = DateTime.now().add(const Duration(seconds: 10));
   Finder candidates = finder.hitTestable();
-  if (candidates.evaluate().isEmpty) {
-    try {
-      await tester.ensureVisible(finder.first);
-      await tester.pump(const Duration(milliseconds: 300));
-    } on StateError {
-      // No Scrollable ancestor -- nothing to scroll, tap where it already is.
-    }
+  while (candidates.evaluate().isEmpty && DateTime.now().isBefore(end)) {
+    await tester.pump(const Duration(milliseconds: 250));
     candidates = finder.hitTestable();
-  }
-  if (candidates.evaluate().isEmpty) {
-    // On screen but obscured -- e.g. ensureVisible aligned it flush with the
-    // viewport's leading edge, right under a sticky header. Nudge the scroll
-    // position and retry once.
-    final scrollable =
-        find.ancestor(of: finder.first, matching: find.byType(Scrollable));
-    if (scrollable.evaluate().isNotEmpty) {
-      await tester.drag(scrollable.first, const Offset(0, 120));
-      await tester.pump(const Duration(milliseconds: 300));
+    if (candidates.evaluate().isEmpty && finder.evaluate().isNotEmpty) {
+      try {
+        await tester.ensureVisible(finder.first);
+        await tester.pump(const Duration(milliseconds: 300));
+      } on StateError {
+        // No Scrollable ancestor -- nothing to scroll, tap where it is.
+      }
       candidates = finder.hitTestable();
     }
   }
-  final target =
-      (candidates.evaluate().isEmpty ? finder : candidates).first;
+  final target = (candidates.evaluate().isEmpty ? finder : candidates).first;
   await tester.tap(target, warnIfMissed: false);
   await tester.pump();
 }
@@ -131,7 +126,8 @@ void main() {
     // Success state offers "View project"; go back home instead. pageBack()
     // only recognises the stock Material/Cupertino back buttons -- the
     // BrutalScaffold title bar draws its own arrow_back GestureDetector.
-    await _pumpUntilFound(tester, find.text('VIEW PROJECT'));
+    await _pumpUntilFound(tester, find.text('VIEW PROJECT'),
+        timeout: const Duration(seconds: 60));
     await _tapVisible(tester, find.byIcon(Icons.arrow_back));
     await _pumpUntilFound(tester, find.text('BUILDER HOME'));
     await _pumpUntilFound(tester, find.textContaining('E2E Project'));
