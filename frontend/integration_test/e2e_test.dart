@@ -147,9 +147,12 @@ void main() {
     await _tapVisible(tester, find.text('SEND REQUEST'));
     await _pumpUntilFound(tester, find.textContaining('Request sent'));
 
-    // Verify it shows under SENT in the requests screen.
-    await _pumpUntilFound(tester, find.text('BUILDER HOME'));
+    // Verify it shows under SENT in the requests screen. After the sheets
+    // close we're still on the MATCH tab -- hop to HOME via the nav bar
+    // first; BUILDER HOME is that tab's title and can't appear before then.
+    // (_tapVisible waits out the snackbar overlapping the nav bar.)
     await _tapVisible(tester, find.text('HOME'));
+    await _pumpUntilFound(tester, find.text('BUILDER HOME'));
     await _tapVisible(tester, find.text('REQUESTS & MESSAGES'));
     await _pumpUntilFound(tester, find.text('SENT'));
     await _tapVisible(tester, find.text('SENT'));
