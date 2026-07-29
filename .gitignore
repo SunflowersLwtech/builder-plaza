@@ -19,3 +19,7 @@ credentials.csv
 
 # Editor
 .vscode/
+
+# Course/demo docs stay local -- only test evidence is committed
+docs/*
+!docs/test-evidence/
