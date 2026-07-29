@@ -40,15 +40,38 @@ Future<void> _pumpUntilFound(
 /// This bit on a CI emulator whose viewport is 890px tall while CREATE
 /// PROJECT sat at y=959, and would bite again on any short device -- the
 /// Device Farm pool spans phones and tablets with very different geometry.
+///
+/// Also prefers hit-testable matches: `finder.first` picks by tree order,
+/// which can land on an off-stage duplicate (a stage label like PROTOTYPE
+/// exists on both the home card rows and the project form's chips, and the
+/// route beneath a pushed page stays in the tree behind an IgnorePointer).
+/// Tapping that copy is silently swallowed.
 Future<void> _tapVisible(WidgetTester tester, Finder finder) async {
-  final target = finder.first;
-  try {
-    await tester.ensureVisible(target);
-    await tester.pump(const Duration(milliseconds: 300));
-  } on StateError {
-    // No Scrollable ancestor -- nothing to scroll, tap where it already is.
+  Finder candidates = finder.hitTestable();
+  if (candidates.evaluate().isEmpty) {
+    try {
+      await tester.ensureVisible(finder.first);
+      await tester.pump(const Duration(milliseconds: 300));
+    } on StateError {
+      // No Scrollable ancestor -- nothing to scroll, tap where it already is.
+    }
+    candidates = finder.hitTestable();
   }
-  await tester.tap(target);
+  if (candidates.evaluate().isEmpty) {
+    // On screen but obscured -- e.g. ensureVisible aligned it flush with the
+    // viewport's leading edge, right under a sticky header. Nudge the scroll
+    // position and retry once.
+    final scrollable =
+        find.ancestor(of: finder.first, matching: find.byType(Scrollable));
+    if (scrollable.evaluate().isNotEmpty) {
+      await tester.drag(scrollable.first, const Offset(0, 120));
+      await tester.pump(const Duration(milliseconds: 300));
+      candidates = finder.hitTestable();
+    }
+  }
+  final target =
+      (candidates.evaluate().isEmpty ? finder : candidates).first;
+  await tester.tap(target, warnIfMissed: false);
   await tester.pump();
 }
 
@@ -82,7 +105,7 @@ void main() {
       // Step 2: simulated LinkedIn consent — pick the first preset persona.
       // The screen is watermarked SIMULATED FOR DEMO (ADR-0003).
       await _pumpUntilFound(tester, find.textContaining('Ryan Tan'));
-      await _tapVisible(tester, find.textContaining('Ryan Tan').first);
+      await _tapVisible(tester, find.textContaining('Ryan Tan'));
 
       // Step 3: choose the Builder role.
       await _pumpUntilFound(tester, find.text('CHOOSE YOUR VIEW'));
@@ -102,7 +125,7 @@ void main() {
         'E2E Project ${DateTime.now().millisecondsSinceEpoch % 100000}';
     await tester.enterText(find.byType(TextField).first, title);
     // Stage chips: pick "Prototype".
-    await _tapVisible(tester, find.text('PROTOTYPE').first);
+    await _tapVisible(tester, find.text('PROTOTYPE'));
     await _tapVisible(tester, find.text('CREATE PROJECT'));
 
     // Success state offers "View project"; go back home instead.
@@ -116,7 +139,7 @@ void main() {
     await _pumpUntilFound(tester, find.text('CREDIBILITY'),
         timeout: const Duration(seconds: 45)); // engine may embed first time
 
-    await _tapVisible(tester, find.text('CREDIBILITY').first);
+    await _tapVisible(tester, find.text('CREDIBILITY'));
     await _pumpUntilFound(tester, find.text('REQUEST COLLABORATION'));
     await _tapVisible(tester, find.text('REQUEST COLLABORATION'));
     await _pumpUntilFound(tester, find.textContaining('REQUEST →'));
