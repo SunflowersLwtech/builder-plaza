@@ -150,6 +150,19 @@ jobs:
           done
           echo "backend never became healthy:"; cat "$RUNNER_TEMP/uvicorn.log"; exit 1
 
+      # The first /matches call loads the SBERT model and embeds every seeded
+      # user before answering -- far beyond the app's 10s Dio receive timeout
+      # on a 2-core runner. Take that hit here so the flow under test gets a
+      # warm engine and a populated skill_embeddings cache.
+      - name: Warm the matching engine
+        run: |
+          TOKEN=$(curl -sf -X POST http://localhost:8000/auth/dev-login \
+            -H 'Content-Type: application/json' \
+            -d '{"github_login":"warmup-bot","primary_role":"builder"}' \
+            | jq -r .access_token)
+          time curl -sf -m 300 http://localhost:8000/matches \
+            -H "Authorization: Bearer $TOKEN" > /dev/null
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
