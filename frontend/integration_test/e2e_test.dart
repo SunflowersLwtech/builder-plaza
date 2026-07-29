@@ -128,9 +128,11 @@ void main() {
     await _tapVisible(tester, find.text('PROTOTYPE'));
     await _tapVisible(tester, find.text('CREATE PROJECT'));
 
-    // Success state offers "View project"; go back home instead.
+    // Success state offers "View project"; go back home instead. pageBack()
+    // only recognises the stock Material/Cupertino back buttons -- the
+    // BrutalScaffold title bar draws its own arrow_back GestureDetector.
     await _pumpUntilFound(tester, find.text('VIEW PROJECT'));
-    await tester.pageBack();
+    await _tapVisible(tester, find.byIcon(Icons.arrow_back));
     await _pumpUntilFound(tester, find.text('BUILDER HOME'));
     await _pumpUntilFound(tester, find.textContaining('E2E Project'));
 
